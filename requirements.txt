@@ -1,0 +1,8 @@
+flask
+line-bot-sdk
+requests
+BeautifulSoup4
+lxml
+tabula_py
+pandas
+clova-cek-sdk
