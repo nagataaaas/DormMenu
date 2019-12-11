@@ -174,9 +174,14 @@ def download_dorm_menu(month):
                                                        7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[month]))
 
     month_page = bs(requests.get(anc["href"]).text, "lxml")
-    file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
+    try:
+        file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
                                                              7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[
                                                                 month]))
+        if file_anc is None:
+            raise ValueError
+    except:
+        file_anc = month_page.find("a", string="{}月メニュー".format(month))
 
     response = requests.get(file_anc["href"])
 
