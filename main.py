@@ -40,6 +40,11 @@ clova = cek.Clova(
 URL_HEAD = "https://dorm-menu.herokuapp.com/"
 
 
+@app.route("/health")
+def health():
+    return "ok"
+
+
 # /clova に対してのPOSTリクエストを受け付けるサーバーを立てる
 @app.route('/clova', methods=['POST'])
 def my_service():
@@ -176,8 +181,8 @@ def download_dorm_menu(month):
     month_page = bs(requests.get(anc["href"]).text, "lxml")
     try:
         file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
-                                                             7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[
-                                                                month]))
+                                                                 7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[
+                                                                    month]))
         if file_anc is None:
             raise ValueError
     except:
@@ -272,7 +277,8 @@ def callback():
     try:
         if text in {"今日", "飯", "めし"}:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(
+                dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
             response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}"
@@ -289,30 +295,36 @@ def callback():
             else:
                 dat = flow(*map(int, text[:-1].split("月")))
                 date = datetime.date(near_year(int(text[:-1].split("月")[0])), *map(int, text[:-1].split("月")))
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"明日", "あした"}:
             date = datetime.date.today() + datetime.timedelta(days=1)
             dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"明後日", "あさって"}:
             date = datetime.date.today() + datetime.timedelta(days=2)
             dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"昨日", "きのう"}:
             date = datetime.date.today() + datetime.timedelta(days=-1)
             dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"一昨日", "おととい"}:
             date = datetime.date.today() + datetime.timedelta(days=-1)
             dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜", "日曜"}:
             inter = "月火水木金土日".index(text[0]) - datetime.date.today().weekday()
             if inter < 0:
                 inter += 7
             date = datetime.date.today() + datetime.timedelta(days=inter)
             dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]-**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            response = f"{date_to_str(date)}\n\n**--[朝]-**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(
+                dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text.endswith("url"):
             month = text.replace("url", "").replace("月", "").replace("の", "")
             if not month:
