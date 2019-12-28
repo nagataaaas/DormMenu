@@ -29,6 +29,8 @@ import cek
 
 app = Flask(__name__)
 
+MenuData = dict()
+
 line_bot_api = LineBotApi(os.environ["LineBotAccessToken"])
 handler = WebhookHandler(os.environ["LineBotHandler"])
 
@@ -214,16 +216,20 @@ def org(month):
         except subprocess.CalledProcessError:
             break
 
-    with open(pickle_path, "wb") as f:
-        pickle.dump(data, f)
+    MenuData[pickle_name] = data
+
+    # with open(pickle_path, "wb") as f:
+    #     pickle.dump(data, f)
 
 
 def get_date(month, day):
     pickle_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pickle")
     pickle_path = os.path.join("static", pickle_name)
 
-    with open(pickle_path, "rb") as f:
-        data = pickle.load(f)
+    # with open(pickle_path, "rb") as f:
+    #     data = pickle.load(f)
+    
+    data = MenuData[pickle_name]
     return data[f"{month}月{day}日"]
 
 
