@@ -204,10 +204,9 @@ def org(month):
     file_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pdf")
     file_path = os.path.join("static", file_name)
 
-    key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
-    print("org--", MenuData.keys(), key in MenuData, key in MenuData.keys())
+    key_ = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
-    if key in MenuData:
+    if key_ in MenuData:
         return
 
     data = {}
@@ -221,7 +220,7 @@ def org(month):
         except subprocess.CalledProcessError:
             break
 
-    MenuData[key] = data
+    MenuData[key_] = data
     print("org end--", MenuData.keys(), key in MenuData, key in MenuData.keys())
 
 
