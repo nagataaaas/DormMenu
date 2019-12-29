@@ -173,8 +173,13 @@ def download_dorm_menu(month):
     file_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pdf")
     file_path = os.path.join("static", file_name)
 
-    if os.path.exists(file_path):
+    key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
+
+    # if os.path.exists(file_path):
+    #     return
+    if key in MenuData or os.path.exists(file_path):
         return
+
     main_page = bs(requests.get("http://www.akashi.ac.jp/dormitory/").text, "lxml")
     anc = main_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
                                                        7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[month]))
@@ -199,10 +204,9 @@ def org(month):
     file_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pdf")
     file_path = os.path.join("static", file_name)
 
-    pickle_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pickle")
-    pickle_path = os.path.join("static", pickle_name)
+    key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
-    if os.path.exists(pickle_path):
+    if key in MenuData:
         return
 
     data = {}
@@ -216,21 +220,13 @@ def org(month):
         except subprocess.CalledProcessError:
             break
 
-    MenuData[pickle_name] = data
-
-    # with open(pickle_path, "wb") as f:
-    #     pickle.dump(data, f)
+    MenuData[key] = data
 
 
 def get_date(month, day):
-    pickle_name = datetime.date(near_year(month), month, 1).strftime("%y-%m.pickle")
-    pickle_path = os.path.join("static", pickle_name)
+    key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
-    # with open(pickle_path, "rb") as f:
-    #     data = pickle.load(f)
-    
-    data = MenuData[pickle_name]
-    return data[f"{month}月{day}日"]
+    return MenuData[key][f"{month}月{day}日"]
 
 
 def parse_data(data):
@@ -248,9 +244,11 @@ def parse_data(data):
 
 
 def is_splitter(text):
-    if text == "kcal g g g":
+    if text.strip() in ("kcal g g g", "g kcal g g g", "栄養価", "kcal g g"):
         return True
     if "蛋白質" in text and "熱量" in text:
+        return True
+    if re.compile(r"[AB]?定食 ([\d.\s]+)+").match(text):
         return True
     for weekday in "月火水木金土日":
         if f"({weekday})" in text:
