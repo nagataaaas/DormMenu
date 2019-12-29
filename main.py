@@ -205,6 +205,7 @@ def org(month):
     file_path = os.path.join("static", file_name)
 
     key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
+    print("org--", MenuData)
 
     if key in MenuData:
         return
@@ -221,6 +222,7 @@ def org(month):
             break
 
     MenuData[key] = data
+    print("org end--", MenuData)
 
 
 def get_date(month, day):
