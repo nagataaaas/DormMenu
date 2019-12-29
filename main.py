@@ -45,8 +45,6 @@ URL_HEAD = "https://dorm-menu.herokuapp.com/"
 def health():
     return "ok"
 
-
-# /clova に対してのPOSTリクエストを受け付けるサーバーを立てる
 @app.route('/clova', methods=['POST'])
 def my_service():
     body_dict = clova.route(body=request.data, header=request.headers)
@@ -221,7 +219,7 @@ def org(month):
             break
 
     MenuData[key_] = data
-    print("org end--", MenuData.keys(), key in MenuData, key in MenuData.keys())
+    print("org end--", MenuData.keys(), key_ in MenuData, key_ in MenuData.keys())
 
 
 def get_date(month, day):
@@ -276,7 +274,7 @@ def date_to_str(date):
 def callback():
     body = json.loads(request.get_data(as_text=True))
 
-    text = body["events"][0]["message"]["text"]
+    text = body["events"][0]["message"]["text"].strip()
     nl = "\n"
     try:
         if text in {"今日", "飯", "めし"}:
@@ -299,22 +297,20 @@ def callback():
                 dat = flow(*map(int, text[:-1].split("月")))
                 date = datetime.date(near_year(int(text[:-1].split("月")[0])), *map(int, text[:-1].split("月")))
             response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"明日", "あした"}:
-            date = datetime.date.today() + datetime.timedelta(days=1)
+
+        elif text in {"明日", "あした", "あす"} | {"明後日", "あさって"} | {"昨日", "きのう"} | {"一昨日", "おととい"}:
+            if text in {"明日", "あした", "あす"}:
+                date = datetime.date.today() + datetime.timedelta(days=1)
+            elif text in {"明後日", "あさって"}:
+                date = datetime.date.today() + datetime.timedelta(days=2)
+            elif text in {"昨日", "きのう"}:
+                date = datetime.date.today() + datetime.timedelta(days=-1)
+            else:
+                date = datetime.date.today() + datetime.timedelta(days=-1)
+
             dat = flow(date.month, date.day)
             response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"明後日", "あさって"}:
-            date = datetime.date.today() + datetime.timedelta(days=2)
-            dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"昨日", "きのう"}:
-            date = datetime.date.today() + datetime.timedelta(days=-1)
-            dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"一昨日", "おととい"}:
-            date = datetime.date.today() + datetime.timedelta(days=-1)
-            dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+
         elif text in {"月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜", "日曜"}:
             inter = "月火水木金土日".index(text[0]) - datetime.date.today().weekday()
             if inter < 0:
@@ -322,11 +318,13 @@ def callback():
             date = datetime.date.today() + datetime.timedelta(days=inter)
             dat = flow(date.month, date.day)
             response = f"{date_to_str(date)}\n\n**--[朝]-**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+
         elif text.endswith("url"):
-            month = text.replace("url", "").replace("月", "").replace("の", "")
+            month = re.sub("[url月の]", "", text)
             if not month:
                 month = datetime.date.today().strftime("%m")
             response = month_to_pdf(int(month))
+
         else:
             response = "\n".join(("---対応するメッセージ---",
                                   "今日, 飯, めし: 本日の寮食メニュー",
@@ -338,6 +336,9 @@ def callback():
                                   "(月)/(日), 〇月〇日: 対応する日付のメニュー",
                                   "〇月のurl, url: 〇月のメニューのpdfデータ、与えられなければ今月"
                                   "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。\n初回のデータダウンロード・解析は時間がかかる(30秒くらい)から、メッセージを送っても反応が無いときはちょっとだけ待って、もういっかい話しかけてね。"))
+    except MemoryError:
+        global MenuData
+        MenuData = dict()
     except:
         response = "(データが)ないです。"
 
