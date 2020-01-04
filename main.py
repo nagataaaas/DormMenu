@@ -273,6 +273,7 @@ def date_to_str(date):
 
 @app.route("/callback", methods=["POST"])
 def callback():
+    global MenuData, Memory_init
     body = json.loads(request.get_data(as_text=True))
 
     text = body["events"][0]["message"]["text"].strip()
@@ -341,7 +342,6 @@ def callback():
                                   "〇月のurl, url: 〇月のメニューのpdfデータ、与えられなければ今月"
                                   "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。\n初回のデータダウンロード・解析は時間がかかる(30秒くらい)から、メッセージを送っても反応が無いときはちょっとだけ待って、もういっかい話しかけてね。"))
     except MemoryError:
-        global MenuData, Memory_init
         MenuData = dict()
         Memory_init.append(str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))))
     except:
