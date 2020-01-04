@@ -1,7 +1,6 @@
 import re
 import os
 import datetime
-import pickle
 import json
 import subprocess
 
@@ -30,6 +29,8 @@ import cek
 app = Flask(__name__)
 
 MenuData = dict()
+Memory_init = []
+launch = str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")))
 
 line_bot_api = LineBotApi(os.environ["LineBotAccessToken"])
 handler = WebhookHandler(os.environ["LineBotHandler"])
@@ -277,7 +278,10 @@ def callback():
     text = body["events"][0]["message"]["text"].strip()
     nl = "\n"
     try:
-        if text in {"今日", "飯", "めし"}:
+        if text == "メモリ":
+            response = nl.join(Memory_init) if Memory_init else "なしでーす"
+            response += f"\n{launch}からうごいてやーす"
+        elif text in {"今日", "飯", "めし"}:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
             response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
@@ -337,8 +341,9 @@ def callback():
                                   "〇月のurl, url: 〇月のメニューのpdfデータ、与えられなければ今月"
                                   "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。\n初回のデータダウンロード・解析は時間がかかる(30秒くらい)から、メッセージを送っても反応が無いときはちょっとだけ待って、もういっかい話しかけてね。"))
     except MemoryError:
-        global MenuData
+        global MenuData, Memory_init
         MenuData = dict()
+        Memory_init.append(str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))))
     except:
         response = "(データが)ないです。"
 
