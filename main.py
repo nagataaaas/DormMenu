@@ -182,7 +182,9 @@ def download_dorm_menu(month):
     main_page = bs(requests.get("http://www.akashi.ac.jp/dormitory/").text, "lxml")
     anc = main_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
                                                        7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[month]))
-
+    if not anc:
+        return
+    
     month_page = bs(requests.get(anc["href"]).text, "lxml")
     try:
         file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
@@ -205,7 +207,7 @@ def org(month):
 
     key_ = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
-    if key_ in MenuData:
+    if key_ in MenuData or not os.path.exists(file_path):
         return
 
     data = {}
