@@ -275,7 +275,6 @@ def date_to_str(date):
 def callback():
     global MenuData, Memory_init
     body = json.loads(request.get_data(as_text=True))
-
     text = body["events"][0]["message"]["text"].strip()
     nl = "\n"
     try:
@@ -365,4 +364,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
+    for i in range(2):
+        download_dorm_menu(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month+i)
+        org(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))+i)
     app.run(host="0.0.0.0", port=port)
