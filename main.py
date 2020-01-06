@@ -360,23 +360,20 @@ def callback():
 @app.route("/api", methods=["POST"])
 def api():
     global MenuData, Memory_init
-    body = json.loads(request.get_data(as_text=True))
-    text = body["text"].strip()
+    body = json.loads(request.get_json())
+    text = body["text"]
     nl = "\n"
     try:
         if text == "メモリ":
             response = nl.join(Memory_init) if Memory_init else "なしでーす"
             response += f"\n{launch}からうごいてやーす"
-        elif text in {"今日", "飯", "めし"}:
+        elif text == 0:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
             response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
+        elif text == 1:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}"
-        elif text in {"昼", "ひる", "ちゅうしょく", "昼食"}:
-            dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[昼]--**\n{nl.join(dat[1])}"
-        elif text in {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+        elif text == 2:
             dat = flow(datetime.date.today().month, datetime.date.today().day)
             response = f"{date_to_str(datetime.date.today())}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif pattern.search(text):
