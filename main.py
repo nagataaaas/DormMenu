@@ -41,6 +41,7 @@ clova = cek.Clova(
     debug_mode=True)
 
 URL_HEAD = "https://dorm-menu.herokuapp.com/"
+app.config['JSON_AS_ASCII'] = False
 
 @app.route("/health")
 def health():
@@ -184,7 +185,7 @@ def download_dorm_menu(month):
                                                        7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[month]))
     if not anc:
         return
-    
+
     month_page = bs(requests.get(anc["href"]).text, "lxml")
     try:
         file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
@@ -351,6 +352,89 @@ def callback():
     app.logger.info("Request body: " + repr(body))
     try:
         line_bot_api.reply_message(body["events"][0]["replyToken"], TextSendMessage(text=response))
+    except InvalidSignatureError:
+        abort(400)
+
+    return "OK"
+
+@app.route("/api", methods=["POST"])
+def api():
+    global MenuData, Memory_init
+    body = json.loads(request.get_data(as_text=True))
+    text = body["text"].strip()
+    nl = "\n"
+    try:
+        if text == "メモリ":
+            response = nl.join(Memory_init) if Memory_init else "なしでーす"
+            response += f"\n{launch}からうごいてやーす"
+        elif text in {"今日", "飯", "めし"}:
+            dat = flow(datetime.date.today().month, datetime.date.today().day)
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+        elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
+            dat = flow(datetime.date.today().month, datetime.date.today().day)
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}"
+        elif text in {"昼", "ひる", "ちゅうしょく", "昼食"}:
+            dat = flow(datetime.date.today().month, datetime.date.today().day)
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[昼]--**\n{nl.join(dat[1])}"
+        elif text in {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
+            dat = flow(datetime.date.today().month, datetime.date.today().day)
+            response = f"{date_to_str(datetime.date.today())}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+        elif pattern.search(text):
+            if pattern_slash.search(text):
+                dat = flow(*map(int, text.split("/")))
+                date = datetime.date(near_year(int(text.split("/")[0])), *map(int, text.split("/")))
+            else:
+                dat = flow(*map(int, text[:-1].split("月")))
+                date = datetime.date(near_year(int(text[:-1].split("月")[0])), *map(int, text[:-1].split("月")))
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+
+        elif text in {"明日", "あした", "あす"} | {"明後日", "あさって"} | {"昨日", "きのう"} | {"一昨日", "おととい"}:
+            if text in {"明日", "あした", "あす"}:
+                date = datetime.date.today() + datetime.timedelta(days=1)
+            elif text in {"明後日", "あさって"}:
+                date = datetime.date.today() + datetime.timedelta(days=2)
+            elif text in {"昨日", "きのう"}:
+                date = datetime.date.today() + datetime.timedelta(days=-1)
+            else:
+                date = datetime.date.today() + datetime.timedelta(days=-1)
+
+            dat = flow(date.month, date.day)
+            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+
+        elif text in {"月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜", "日曜"}:
+            inter = "月火水木金土日".index(text[0]) - datetime.date.today().weekday()
+            if inter < 0:
+                inter += 7
+            date = datetime.date.today() + datetime.timedelta(days=inter)
+            dat = flow(date.month, date.day)
+            response = f"{date_to_str(date)}\n\n**--[朝]-**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+
+        elif text.endswith("url"):
+            month = re.sub("[url月の]", "", text)
+            if not month:
+                month = datetime.date.today().strftime("%m")
+            response = month_to_pdf(int(month))
+
+        else:
+            response = "\n".join(("---対応するメッセージ---",
+                                  "今日, 飯, めし: 本日の寮食メニュー",
+                                  "朝, 朝食: 本日の朝食",
+                                  "昼, 昼食: 本日の昼食",
+                                  "晩, 夕食: 本日の夕食",
+                                  "明日, 明後日, 昨日, 一昨日: 対応する日のメニュー",
+                                  "〇曜日, 〇曜: 最も近い将来の対応する曜日のメニュー",
+                                  "(月)/(日), 〇月〇日: 対応する日付のメニュー",
+                                  "〇月のurl, url: 〇月のメニューのpdfデータ、与えられなければ今月"
+                                  "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。\n初回のデータダウンロード・解析は時間がかかる(30秒くらい)から、メッセージを送っても反応が無いときはちょっとだけ待って、もういっかい話しかけてね。"))
+    except MemoryError:
+        MenuData = dict()
+        Memory_init.append(str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))))
+    except:
+        response = "(データが)ないです。"
+
+    app.logger.info("Request body: " + repr(body))
+    try:
+        return jsonify({"text": response})
     except InvalidSignatureError:
         abort(400)
 
