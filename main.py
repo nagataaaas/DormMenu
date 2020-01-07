@@ -360,7 +360,7 @@ def callback():
 @app.route("/api", methods=["POST"])
 def api():
     global MenuData, Memory_init
-    body = json.loads(request.get_json())
+    body = request.get_json()
     text = body["text"]
     nl = "\n"
     try:
