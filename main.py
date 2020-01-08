@@ -247,7 +247,7 @@ def parse_data(data):
 
 
 def is_splitter(text):
-    if text.strip() in ("kcal g g g", "g kcal g g g", "栄養価", "kcal g g"):
+    if all(t in "kcalg " for t in text.strip()) or text.strip() in ("栄養価",):
         return True
     if "蛋白質" in text and "熱量" in text:
         return True
