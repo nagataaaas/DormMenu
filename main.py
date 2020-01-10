@@ -382,7 +382,7 @@ def get_data(text):
         else:
             response = "(データが)ないです。"
             if month:
-                response += "なので、代わりにpdfみてみてください…"
+                response += "なので、代わりにpdfみてみてください…\n" + month_to_pdf(int(month))
     return {"is_image": False, "text": response}
 
 
