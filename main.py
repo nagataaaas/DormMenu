@@ -381,8 +381,11 @@ def get_data(text):
             return {"is_image": True, "text": "https://dorm-menu.herokuapp.com/image/{}".format(date_str)}
         else:
             response = "(データが)ないです。"
-            if month:
-                response += "なので、代わりにpdfみてみてください…\n" + month_to_pdf(int(month))
+            try:
+                if month:
+                    response += "なので、代わりにpdfみてみてください…\n" + month_to_pdf(int(month))
+            except ValueError:
+                pass
     return {"is_image": False, "text": response}
 
 
