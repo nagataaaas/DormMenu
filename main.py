@@ -3,6 +3,7 @@ import os
 import datetime
 import json
 import subprocess
+import threading
 
 from functools import lru_cache
 
@@ -377,7 +378,7 @@ def get_data(text):
             str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))))
     except:
         if date_str.rsplit("-", 1)[0] in MenuData.keys():
-            return {"is_image": True, "text": "https://https://dorm-menu.herokuapp.com/image/{}".format(date_str)}
+            return {"is_image": True, "text": "https://dorm-menu.herokuapp.com/image/{}".format(date_str)}
         else:
             response = "(データが)ないです。"
             if month:
@@ -451,10 +452,15 @@ def handle_message(event):
         event.reply_token,
         TextSendMessage(text=event.message.text))
 
+def init_process():
+    for i in range(2):
+        download_dorm_menu(
+            datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month + i)
+        org(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month + i)
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
-    for i in range(2):
-        download_dorm_menu(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month+i)
-        org(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month+i)
+    thread = threading.Thread(target=init_process)
+    thread.start()
     app.run(host="0.0.0.0", port=port)
