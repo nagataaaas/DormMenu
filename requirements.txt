@@ -6,3 +6,6 @@ lxml
 tabula_py
 pandas
 clova-cek-sdk
+pdf2image
+pillow
+poppler
