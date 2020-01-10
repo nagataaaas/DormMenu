@@ -318,12 +318,12 @@ def get_data(text):
             response = f"{date_to_str(datetime.date.today())}\n\n**--[晩]--**\n{nl.join(dat[2])}"
         elif pattern.search(text):
             if pattern_slash.search(text):
-                date_str = datetime.date(near_year(int(text.split("/")[0])), int(text.split("/")[0]), datetime.date.today().day).strftime("%y-%m-%d")
+                date_str = datetime.date(near_year(int(text.split("/")[0])), int(text.split("/")[0]), int(text.split("/")[1])).strftime("%y-%m-%d")
                 month = int(text.split("/")[1])
                 dat = flow(*map(int, text.split("/")))
                 date = datetime.date(near_year(int(text.split("/")[0])), *map(int, text.split("/")))
             else:
-                date_str = datetime.date(near_year(int(text[:-1].split("月")[0])), int(text.split("/")[0]), datetime.date.today().day).strftime("%y-%m-%d")
+                date_str = datetime.date(near_year(int(text[:-1].split("月")[0])), int(text.split("/")[0]), int(text.split("/")[1])).strftime("%y-%m-%d")
                 month = int(text[:-1].split("月")[1])
                 date = datetime.date(near_year(int(text[:-1].split("月")[0])), *map(int, text[:-1].split("月")))
             response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
