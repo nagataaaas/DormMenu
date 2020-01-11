@@ -11,146 +11,32 @@ import tabula
 import requests
 import pandas as pd
 from PIL import Image
-
 from bs4 import BeautifulSoup as bs
-
 from flask import Flask, request, abort, jsonify, send_file
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
-)
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, ImageSendMessage
 from pdf2image import convert_from_path
-
-import cek
 
 app = Flask(__name__)
 
 MenuData = dict()
-Memory_init = []
-launch = str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")))
 
 line_bot_api = LineBotApi(os.environ.get("LineBotAccessToken", "none"))
 handler = WebhookHandler(os.environ.get("LineBotHandler", "none"))
 
-clova = cek.Clova(
-    application_id="com.dorm-menu.nagata",
-    default_language="ja",
-    debug_mode=True)
-
 URL_HEAD = "https://dorm-menu.herokuapp.com/"
-app.config['JSON_AS_ASCII'] = False
-
-@app.route("/health")
-def health():
-    return "ok"
-
-@app.route('/clova', methods=['POST'])
-def my_service():
-    body_dict = clova.route(body=request.data, header=request.headers)
-    response = jsonify(body_dict)
-    response.headers['Content-Type'] = 'application/json;charset-UTF-8'
-    return response
-
-
-@clova.handle.launch
-def launch_request_handler(clova_request):
-    welcome_japanese = cek.Message(message="寮飯を教えてしんぜよう", language="ja")
-    response = clova.response([welcome_japanese])
-    return response
-
-
-@clova.handle.intent("Both_Info")
-def wife_status_handler(clova_request):
-    slots = clova_request.slots
-    date = slots.get("datetime")
-    lunch = slots.get("Lunch")
-    if not date:
-        date = datetime.date.today()
-    else:
-        date = datetime.datetime.strptime(date, "%Y-%m-%d")
-    date_tuple = (date.month, date.day)
-    if not lunch:
-        lunch = "ごはん"
-    try:
-        data = flow(*date_tuple)
-        date_str = f"{date.month}月{date.day}日"
-        space = " "
-        if lunch == "ごはん":
-            text = f"{date_str}の朝ごはんは、{space.join(data[0])}。昼ごはんは、{space.join(data[1])}。晩ごはんは{space.join(data[2])}です。"
-        else:
-            time = lunch[0]
-            time_num = "朝昼夕".index(time)
-            text = f"{date_str}の{time}ごはんは、{space.join(data[time_num])}です。"
-        message_japanese = cek.Message(message=text, language="ja")
-        response = clova.response([message_japanese])
-    except:
-        message_japanese = cek.Message(message="データがないっぽいです ", language="ja")
-        response = clova.response([message_japanese])
-    return response
-
-
-@clova.handle.intent("Only_Time")
-def wife_status_handler(clova_request):
-    slots = clova_request.slots
-    date = slots.get("datetime")
-    date = datetime.datetime.strptime(date, "%Y-%m-%d")
-    date_tuple = (date.month, date.day)
-    try:
-        data = flow(*date_tuple)
-        date_str = f"{date.month}月{date.day}日"
-        space = " "
-        text = f"{date_str}の朝ごはんは、{space.join(data[0])}。昼ごはんは、{space.join(data[1])}。晩ごはんは{space.join(data[2])}です。"
-        message_japanese = cek.Message(message=text, language="ja")
-        response = clova.response([message_japanese])
-    except:
-        message_japanese = cek.Message(message="データがないっぽいです ", language="ja")
-        response = clova.response([message_japanese])
-    return response
-
-
-@clova.handle.intent("Only_Lunch")
-def wife_status_handler(clova_request):
-    slots = clova_request.slots
-    lunch = slots.get("Lunch")
-    date = datetime.date.today()
-    date_tuple = (date.month, date.day)
-    try:
-        data = flow(*date_tuple)
-        date_str = f"{date.month}月{date.day}日"
-        space = " "
-        if lunch == "ごはん":
-            text = f"{date_str}の朝ごはんは、{space.join(data[0])}。昼ごはんは、{space.join(data[1])}。晩ごはんは{space.join(data[2])}です。"
-        else:
-            time = lunch[0]
-            time_num = "朝昼夕".index(time)
-            text = f"{date_str}の{time}ごはんは、{space.join(data[time_num])}です。"
-        message_japanese = cek.Message(message=text, language="ja")
-        response = clova.response([message_japanese])
-    except:
-        message_japanese = cek.Message(message="データがないっぽいです ", language="ja")
-        response = clova.response([message_japanese])
-    return response
-
-
-@clova.handle.end
-def end_handler(clova_request):
-    print("session end")
-
-
-@clova.handle.default
-def default_handler(request):
-    return clova.response("Sorry I don't understand! Could you please repeat?")
-
+app.config["JSON_AS_ASCII"] = False
 
 pattern = re.compile("([0-9]+/[0-9]+)|([0-9]+月[0-9]+日)")
 pattern_slash = re.compile("([0-9]+/[0-9]+)")
 date_pattern = re.compile("([0-9]+月[0-9]+日)")
+day_pattern = re.compile("[月火水木金土日]曜日?")
+
+
+@app.route("/health")
+def health():
+    return "ok"
 
 
 def near_year(month):
@@ -169,7 +55,7 @@ def near_year(month):
 def month_to_pdf(month):
     if os.path.exists(os.path.join("static", datetime.date(near_year(month), month, 1).strftime("%y-%m.pdf"))):
         return URL_HEAD + "static/" + datetime.date(near_year(month), month, 1).strftime("%y-%m.pdf")
-    raise ValueError
+    return None
 
 
 def download_dorm_menu(month):
@@ -178,42 +64,31 @@ def download_dorm_menu(month):
 
     key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
-    # if os.path.exists(file_path):
-    #     return
     if key in MenuData or os.path.exists(file_path):
         return
 
+    full_width_num = {1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
+                      7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}
+
     main_page = bs(requests.get("http://www.akashi.ac.jp/dormitory/").text, "lxml")
-    anc = main_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
-                                                       7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[month]))
-    if not anc:
+    full_width = main_page.find("a", string="{}月メニュー".format(full_width_num[month]))
+    half_width = main_page.find("a", string="{}月メニュー".format(month))
+    if not full_width and not half_width:
         return
 
-    month_page = bs(requests.get(anc["href"]).text, "lxml")
-    try:
-        file_anc = month_page.find("a", string="{}月メニュー".format({1: "１", 2: "２", 3: "３", 4: "４", 5: "５", 6: "６",
-                                                             7: "７", 8: "８", 9: "９", 10: "１０", 11: "１１", 12: "１２"}[
-                                                                month]))
-        if file_anc is None:
-            raise ValueError
-    except:
-        file_anc = month_page.find("a", string="{}月メニュー".format(month))
-
-    response = requests.get(file_anc["href"])
+    pdf = requests.get((full_width or half_width)["href"])
 
     with open(file_path, "wb") as f:
-        f.write(response.content)
+        f.write(pdf.content)
 
 
 def org(month):
     file_name_body = datetime.date(near_year(month), month, 1).strftime("%y-%m")
     file_name = file_name_body + ".pdf"
-    file_body_path = os.path.join("static", file_name_body)
+    file_image_directory = os.path.join("static", file_name_body)
     file_path = os.path.join("static", file_name)
 
-    key_ = datetime.date(near_year(month), month, 1).strftime("%y-%m")
-
-    if key_ in MenuData or not os.path.exists(file_path):
+    if file_name_body in MenuData or not os.path.exists(file_path):
         return
 
     data = {}
@@ -227,17 +102,16 @@ def org(month):
         except subprocess.CalledProcessError:
             break
 
-    MenuData[key_] = data
-    if not os.path.exists(file_body_path):
-        os.makedirs(file_body_path)
+    MenuData[file_name_body] = data
+
+    os.makedirs(file_image_directory, exist_ok=True)
+    if not os.listdir(file_image_directory):
         images = convert_from_path(file_path)
         for ind, img in enumerate(images):
-            print(os.path.join(file_body_path, "{}.jpeg".format(ind)))
-            img.save(os.path.join(file_body_path, "{}.jpeg".format(ind)), "jpeg")
-    print("org end--", MenuData.keys(), key_ in MenuData, key_ in MenuData.keys())
+            img.save(os.path.join(file_image_directory, "{}.jpeg".format(ind)), "jpeg")
 
 
-def get_date(month, day):
+def fetch_data(month, day):
     key = datetime.date(near_year(month), month, 1).strftime("%y-%m")
 
     return MenuData[key][f"{month}月{day}日"]
@@ -258,7 +132,7 @@ def parse_data(data):
 
 
 def is_splitter(text):
-    if all(t in "kcalg " for t in text.strip()) or text.strip() in ("栄養価",):
+    if all(t in "kcalg1234567890. " for t in text.strip()) or text.strip() in ("栄養価",):
         return True
     if "蛋白質" in text and "熱量" in text:
         return True
@@ -267,8 +141,6 @@ def is_splitter(text):
     for weekday in "月火水木金土日":
         if f"({weekday})" in text:
             return True
-    if text.translate(str.maketrans({key: "" for key in "1234567890 ."})) == "":
-        return True
     return False
 
 
@@ -276,57 +148,79 @@ def is_splitter(text):
 def flow(month, day):
     download_dorm_menu(month)
     org(month)
-    data = get_date(month, day)
+    data = fetch_data(month, day)
     return parse_data(data)
 
 
 def date_to_str(date):
-    weekdays = "月火水木金土日"
-    weekday = date.weekday()
-    return f"{date.month}月{date.day}日 ({weekdays[weekday]})"
+    weekday = "月火水木金土日"[date.weekday()]
+    return f"{date.month}月{date.day}日 ({weekday})"
+
+
+format_mon_lun_din = \
+    """{}
+    
+    **--[朝]--**
+    {}
+    
+    **--[昼]--**
+    {}
+    
+    **--[晩]--**
+    {}"""
+
+format_mon = \
+    """{}
+    
+    **--[朝]--**
+    {}"""
+
+format_lun = \
+    """{}
+    
+    **--[昼]--**
+    {}"""
+
+format_din = \
+    """{}
+    
+    **--[晩]--**
+    {}"""
+
 
 def get_data(text):
-    global MenuData, Memory_init
     nl = "\n"
     month = False
+    response = False
     is_image_needed = text.endswith("画像")
     if is_image_needed:
         text = text[:-2]
     try:
-        if text == "メモリ":
-            response = nl.join(Memory_init) if Memory_init else "なしでーす"
-            response += f"\n{launch}からうごいてやーす"
-        elif text in {"今日", "飯", "めし"}:
-            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month, datetime.date.today().day).strftime("%y-%m-%d")
+        if text in {"今日", "飯", "めし"} | {"朝", "今朝", "あさ", "朝食", "ちょうしょく"} | \
+                {"昼", "ひる", "ちゅうしょく", "昼食"} | {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
+            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month,
+                                     datetime.date.today().day).strftime("%y-%m-%d")
             month = datetime.date.today().month
-            dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-        elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
-            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month, datetime.date.today().day).strftime("%y-%m-%d")
-            month = datetime.date.today().month
-            dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[朝]--**\n{nl.join(dat[0])}"
-        elif text in {"昼", "ひる", "ちゅうしょく", "昼食"}:
-            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month, datetime.date.today().day).strftime("%y-%m-%d")
-            month = datetime.date.today().month
-            dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[昼]--**\n{nl.join(dat[1])}"
-        elif text in {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
-            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month, datetime.date.today().day).strftime("%y-%m-%d")
-            month = datetime.date.today().month
-            dat = flow(datetime.date.today().month, datetime.date.today().day)
-            response = f"{date_to_str(datetime.date.today())}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            data = flow(datetime.date.today().month, datetime.date.today().day)
+            date_str = date_to_str(datetime.date.today())
+            if text in {"今日", "飯", "めし"}:
+                response = format_mon_lun_din.format(date_str, *map(nl.join, data))
+            elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
+                response = format_mon.format(date_str, nl.join(data[0]))
+            elif text in {"昼", "ひる", "ちゅうしょく", "昼食"}:
+                response = format_lun.format(date_str, nl.join(data[1]))
+            elif text in {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
+                response = format_din.format(date_str, nl.join(data[2]))
         elif pattern.search(text):
             if pattern_slash.search(text):
-                date_str = datetime.date(near_year(int(text.split("/")[0])), int(text.split("/")[0]), int(text.split("/")[1])).strftime("%y-%m-%d")
-                month = int(text.split("/")[1])
-                dat = flow(*map(int, text.split("/")))
-                date = datetime.date(near_year(int(text.split("/")[0])), *map(int, text.split("/")))
+                sptxt = text.split("/")
             else:
-                date_str = datetime.date(near_year(int(text[:-1].split("月")[0])), int(text.split("/")[0]), int(text.split("/")[1])).strftime("%y-%m-%d")
-                month = int(text[:-1].split("月")[1])
-                date = datetime.date(near_year(int(text[:-1].split("月")[0])), *map(int, text[:-1].split("月")))
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+                sptxt = text[:-1].split("月")
+            date_str = datetime.date(near_year(int(sptxt[0])), int(sptxt[0]), int(sptxt[1])).strftime("%y-%m-%d")
+            month = int(sptxt[1])
+            data = flow(*map(int, sptxt))
+            date = datetime.date(near_year(int(sptxt[0])), *map(int, sptxt))
+            response = format_mon_lun_din.format(date_to_str(date), *map(nl.join, data))
 
         elif text in {"明日", "あした", "あす"} | {"明後日", "あさって"} | {"昨日", "きのう"} | {"一昨日", "おととい"}:
             if text in {"明日", "あした", "あす"}:
@@ -340,18 +234,17 @@ def get_data(text):
 
             date_str = datetime.date(near_year(date.month), date.month, date.day).strftime("%y-%m-%d")
             month = date.month
-            dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]--**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
-
-        elif text in {"月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日", "日曜日", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜", "日曜"}:
+            data = flow(date.month, date.day)
+            response = format_mon_lun_din.format(date_to_str(date), *map(nl.join, data))
+        elif day_pattern.search(text):
             inter = "月火水木金土日".index(text[0]) - datetime.date.today().weekday()
             if inter < 0:
                 inter += 7
             date = datetime.date.today() + datetime.timedelta(days=inter)
             date_str = datetime.date(near_year(date.month), date.month, date.day).strftime("%y-%m-%d")
             month = date.month
-            dat = flow(date.month, date.day)
-            response = f"{date_to_str(date)}\n\n**--[朝]-**\n{nl.join(dat[0])}\n\n**--[昼]--**\n{nl.join(dat[1])}\n\n**--[晩]--**\n{nl.join(dat[2])}"
+            data = flow(date.month, date.day)
+            response = format_mon_lun_din.format(date_to_str(date), *map(nl.join, data))
 
         elif text.endswith("url"):
             month = re.sub("[url月の]", "", text)
@@ -369,16 +262,14 @@ def get_data(text):
                                   "〇曜日, 〇曜: 最も近い将来の対応する曜日のメニュー",
                                   "(月)/(日), 〇月〇日: 対応する日付のメニュー",
                                   "〇月のurl, url: 〇月のメニューのpdfデータ、与えられなければ今月"
-                                  "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。\n初回のデータダウンロード・解析は時間がかかる(30秒くらい)から、メッセージを送っても反応が無いときはちょっとだけ待って、もういっかい話しかけてね。"))
+                                  "\n\n全部自動化してるからそりゃエラーを吐いたり間違ったデータを送ることだってあるけど、気にしたら負けだと思う。",
+                                  "そういう時には、送りたいコマンド+\"画像\" (例えば、 『めし画像』)っていう風にすると、画像で返信するから間違いないね。うん。"))
         if is_image_needed:
             raise InterruptedError
-    except MemoryError:
-        MenuData = dict()
-        Memory_init.append(
-            str(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST"))))
+
     except:
         if date_str.rsplit("-", 1)[0] in MenuData.keys():
-            return {"is_image": True, "text": "https://dorm-menu.herokuapp.com/image/{}".format(date_str)}
+            return {"is_image": True, "text": "{}image/{}".format(URL_HEAD, date_str)}
         else:
             response = "(データが)ないです。"
             try:
@@ -393,56 +284,56 @@ def get_data(text):
 def image(key):
     year, month, day = map(int, key.split("-"))
     year += 2000
-    if not os.path.exists(os.path.join("static", datetime.date(year, month, 1).strftime("%y-%m"), "per_day", "{}.jpeg".format(day))):
-        os.makedirs(os.path.join("static", datetime.date(year, month, 1).strftime("%y-%m"), "per_day"), exist_ok=True)
-        date = datetime.date(year, month, day)
+    month_date_str = datetime.date(year, month, 1).strftime("%y-%m")
+    if not os.path.exists(
+            os.path.join("static", month_date_str, "per_day", "{}.jpeg".format(day))):
+        os.makedirs(os.path.join("static", month_date_str, "per_day"), exist_ok=True)
         first_day = datetime.date(year, month, 1).weekday()
         day_with_offset = first_day + day - 1
         page = day_with_offset // 7
         number = day_with_offset % 7
-        im = Image.open(os.path.join("static", datetime.date(year, month, 1).strftime("%y-%m"), "{}.jpeg".format(page)))
-        im = im.crop((186+int(287.7*number), 188, 186 + int(287.7*(number+1)) + 13, 1579))
-        im.save(os.path.join("static", datetime.date(year, month, 1).strftime("%y-%m"), "per_day", "{}.jpeg".format(day)), "jpeg")
-    return send_file(os.path.join("static", datetime.date(year, month, 1).strftime("%y-%m"), "per_day", "{}.jpeg".format(day)))
+        im = Image.open(os.path.join("static", month_date_str, "{}.jpeg".format(page)))
+        im = im.crop((186 + int(287.7 * number), 188, 186 + int(287.7 * (number + 1)) + 13, 1579))
+        im.save(
+            os.path.join("static", month_date_str, "per_day", "{}.jpeg".format(day)),
+            "jpeg")
+    return send_file(
+        os.path.join("static", month_date_str, "per_day", "{}.jpeg".format(day)))
 
 
 @app.route("/callback", methods=["POST"])
 def callback():
-    global MenuData, Memory_init
     body = json.loads(request.get_data(as_text=True))
     text = body["events"][0]["message"]["text"].strip()
     result = get_data(text)
-    if result["is_image"]:
-        response = ImageSendMessage(
-            original_content_url=result["text"],
-            preview_image_url=result["text"]
-        )
-    else:
-        response = result["text"]
 
-    app.logger.info("Request body: " + repr(body))
     try:
-        if isinstance(response, ImageSendMessage):
+        if result["is_image"]:
+            response = ImageSendMessage(
+                original_content_url=result["text"],
+                preview_image_url=result["text"]
+            )
             line_bot_api.reply_message(
                 body["events"][0]["replyToken"],
                 response)
         else:
+            response = result["text"]
             line_bot_api.reply_message(body["events"][0]["replyToken"], TextSendMessage(text=response))
     except InvalidSignatureError:
         abort(400)
 
     return "OK"
 
+
 @app.route("/api", methods=["POST"])
 def api():
-    global MenuData, Memory_init
     body = request.get_json()
     text = body["text"]
     result = get_data(text)
 
     app.logger.info("Request body: " + repr(body))
     try:
-        return jsonify({"text": result["text"]})
+        return jsonify(result)
     except InvalidSignatureError:
         abort(400)
 
@@ -453,12 +344,14 @@ def api():
 def handle_message(event):
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=event.message.text))
+        TextSendMessage(text=event.message.text)
+    )
+
 
 def init_process():
     for i in range(2):
-        download_dorm_menu(
-            datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month + i)
+        download_dorm_menu(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9),
+                                                                      name="JST")).month + i)
         org(datetime.datetime.now(tz=datetime.timezone(offset=datetime.timedelta(hours=+9), name="JST")).month + i)
 
 
