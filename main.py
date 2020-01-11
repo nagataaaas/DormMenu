@@ -157,35 +157,13 @@ def date_to_str(date):
     return f"{date.month}月{date.day}日 ({weekday})"
 
 
-format_mon_lun_din = \
-    """{}
-    
-    **--[朝]--**
-    {}
-    
-    **--[昼]--**
-    {}
-    
-    **--[晩]--**
-    {}"""
+format_mon_lun_din = "{}\n\n**--[朝]--**\n{}\n\n**--[昼]--**\n{}\n\n**--[晩]--**\n{}"
 
-format_mon = \
-    """{}
-    
-    **--[朝]--**
-    {}"""
+format_mon = "{}\n\n**--[朝]--**\n{}"
 
-format_lun = \
-    """{}
-    
-    **--[昼]--**
-    {}"""
+format_lun = "{}\n\n**--[昼]--**\n{}"
 
-format_din = \
-    """{}
-    
-    **--[晩]--**
-    {}"""
+format_din = "{}\n\n**--[晩]--**\n{}"""
 
 
 def get_data(text):
@@ -230,7 +208,7 @@ def get_data(text):
             elif text in {"昨日", "きのう"}:
                 date = datetime.date.today() + datetime.timedelta(days=-1)
             else:
-                date = datetime.date.today() + datetime.timedelta(days=-1)
+                date = datetime.date.today() + datetime.timedelta(days=-2)
 
             date_str = datetime.date(near_year(date.month), date.month, date.day).strftime("%y-%m-%d")
             month = date.month
