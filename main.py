@@ -176,11 +176,9 @@ def get_data(text):
     try:
         if text in {"今日", "飯", "めし"} | {"朝", "今朝", "あさ", "朝食", "ちょうしょく"} | \
                 {"昼", "ひる", "ちゅうしょく", "昼食"} | {"夜", "晩", "よる", "ばん", "ゆうしょく", "夕食"}:
-            date_str = datetime.date(near_year(datetime.date.today().month), datetime.date.today().month,
-                                     datetime.date.today().day).strftime("%y-%m-%d")
+            date_str = datetime.date.today().strftime("%y-%m-%d")
             month = datetime.date.today().month
             data = flow(datetime.date.today().month, datetime.date.today().day)
-            date_str = date_to_str(datetime.date.today())
             if text in {"今日", "飯", "めし"}:
                 response = format_mon_lun_din.format(date_str, *map(nl.join, data))
             elif text in {"朝", "今朝", "あさ", "朝食", "ちょうしょく"}:
